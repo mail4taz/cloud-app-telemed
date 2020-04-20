@@ -16,7 +16,6 @@ const createError = require('http-errors')
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     //logger.info('Processing event ', event);
-    const itemId = event.pathParameters.appointmentId
     
     let userId: string
     try {
@@ -29,13 +28,14 @@ export const handler = middy(
 
     let delItem
     try {
-      delItem = await deleteAppointment(itemId, userId)
+      const appDateTimeId = parseInt(event.pathParameters.appDateTimeId)
+      delItem = await deleteAppointment(userId, appDateTimeId)
     } catch (e) {
-      throw new createError.InternalServerError(`Failed to delete appointment ${itemId}`)
+      throw new createError.InternalServerError(`Failed to delete appointment ${event.pathParameters.appDateTimeId}`)
     }
 
     if (!delItem)
-      throw new createError.NotFound(`Appointment ${itemId} not found`)
+      throw new createError.NotFound(`Appointment ${event.pathParameters.appDateTimeId} not found`)
 
     return {
       statusCode: 200,

@@ -4,5 +4,5 @@
 export interface CreateAppointmentRequest {
   staffId: string,
   name: string,
-  dueDatetime: string
+  dueDatetime: number
 }

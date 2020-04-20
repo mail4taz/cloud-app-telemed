@@ -30,7 +30,7 @@ export const handler = middy(
     let newItem
     try {
       const newAppReq: CreateAppointmentRequest = JSON.parse(event.body)
-      newItem = await createAppointment(newAppReq, userId)
+      newItem = await createAppointment(userId, newAppReq)
     } catch (e) {
       logger.error('Failed to create appointment', e)
 

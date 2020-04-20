@@ -9,7 +9,7 @@ export class AppointmentsDao {
     constructor (
         private readonly docClient: AWS.DynamoDB.DocumentClient = new XAWS.DynamoDB.DocumentClient(),
         private readonly appointmentsTable = process.env.APPOINTMENTS_TABLE,
-        private readonly appointmentsByDateIdx = process.env.APPOINTMENTS_BY_DATE_IDX,
+        private readonly appointmentsByStaffIdx = process.env.APPOINTMENTS_BY_STAFF_IDX,
         private readonly logger = createLogger('AppointmentsDao')
     ) {}
 
@@ -18,12 +18,11 @@ export class AppointmentsDao {
 
         const result = await this.docClient.query({
             TableName: this.appointmentsTable,
-            IndexName: this.appointmentsByDateIdx,
             KeyConditionExpression: 'userId = :user',
             ExpressionAttributeValues: {
                 ':user': userId
             },
-            ProjectionExpression: 'appointmentId, staffId, #n, createdAt, dueDatetime, done, attachmentUrl',
+            ProjectionExpression: 'dueDatetime, staffId, #n, done, attachmentsUrl',
             ExpressionAttributeNames: {
                 "#n": "username"
             }
@@ -35,8 +34,8 @@ export class AppointmentsDao {
 
 
     async createAppointment(newAppointment: Appointment): Promise<Appointment> {
-        this.logger.info(`Creating appointment with id ${newAppointment.appointmentId}`)
-        this.logger.debug(newAppointment)
+        this.logger.info(`Creating appointment for user ${newAppointment.userId} on ${newAppointment.dueDatetime}`)
+        //this.logger.debug(newAppointment)
 
         try {
             await this.docClient.put({
@@ -44,21 +43,21 @@ export class AppointmentsDao {
                 Item: newAppointment
             }).promise()
         } catch (e) {
-            this.logger.info(`Creating appointment with id ${newAppointment.appointmentId} failed - ${e.message}`)
+            this.logger.info(`Creating appointment with id ${newAppointment.userId} failed - ${e.message}`)
             return
         }
 
         return newAppointment
     }
 
-    async loadAppointment(appItem: Appointment): Promise<Appointment> {
-        this.logger.info(`Loading appointment with id ${appItem.appointmentId}`)
+    async loadUserAppointment(appItem: Appointment): Promise<Appointment> {
+        this.logger.info(`Loading appointment for user ${appItem.userId}`)
 
         const result = await this.docClient.get({
             TableName: this.appointmentsTable,
             Key: {
                 userId: appItem.userId,
-                appointmentId: appItem.appointmentId
+                dueDatetime: appItem.dueDatetime
             }
         }).promise()
 
@@ -67,52 +66,75 @@ export class AppointmentsDao {
         }
     }
 
+    async loadStaffAppointment(appItem: Appointment): Promise<Appointment> {
+        this.logger.info(`Loading appointment for staff ${appItem.staffId}`)
+
+        const result = await this.docClient.query({
+            TableName: this.appointmentsTable,
+            IndexName: this.appointmentsByStaffIdx,
+            KeyConditionExpression: 'staffId = :staff AND dueDatetime = :dueDatetime',
+            ExpressionAttributeValues: {
+                ':staff': appItem.staffId,
+                ':dueDatetime': appItem.dueDatetime
+            },
+            ScanIndexForward: false
+        }).promise()
+
+        if (result.Count == 1) {
+            return result.Items[0] as Appointment
+        }
+    }
+
     async deleteAppointment(appItem: Appointment) {
-        this.logger.info(`Deleting appointment with id ${appItem.appointmentId}`)
+        this.logger.info(`Deleting appointment for user ${appItem.userId} on ${appItem.dueDatetime}`)
 
         await this.docClient.delete({
             TableName: this.appointmentsTable,
             Key: {
                 userId: appItem.userId,
-                appointmentId: appItem.appointmentId
+                dueDatetime: appItem.dueDatetime
             }
         }).promise()
     }
-    /*
-    async updateAppointment(appItem:Appointment, updateItem: AppointmentUpdate) {
-        this.logger.info(`Updating appointment with id ${appItem.appointmentId}`)
+    
+    async updateAppointment(appItem:Appointment, updateItem: any) {
+        this.logger.info(`Updating appointment for user ${appItem.userId} on ${appItem.dueDatetime}`)
 
         await this.docClient.update({
             TableName: this.appointmentsTable,
             Key: {
                 userId: appItem.userId,
-                appointmentId: appItem.appointmentId
+                dueDatetime: appItem.dueDatetime
             },
-            UpdateExpression: 'SET #n=:name, done=:done, dueDate=:date',
+            UpdateExpression: 'SET #n=:name, done=:done',
             ExpressionAttributeNames: {
                 "#n": "name"
             },
             ExpressionAttributeValues: {
-                ':name': updateItem.name,
-                ':done': updateItem.done,
-                ':date': updateItem.dueDate
+                ':name': updateItem.username ? updateItem.username : appItem.username,
+                ':done': (typeof(updateItem.done) != 'undefined') && (updateItem.done != null) ? updateItem.done : appItem.done
             }
         }).promise()
     }
-    */
-    async attachFile(appItem:Appointment, filename: string) {
-        this.logger.info(`Attachinig image to appointment with id ${appItem.appointmentId}`)
+    
+    async attachFile(appItem:Appointment, filename: string): Promise<Appointment> {
+        this.logger.info(`Attaching image to appointment for user ${appItem.userId} on ${appItem.dueDatetime}`)
 
-        await this.docClient.update({
+        const result = await this.docClient.update({
             TableName: this.appointmentsTable,
             Key: {
                 userId: appItem.userId,
-                appointmentId: appItem.appointmentId
+                dueDatetime: appItem.dueDatetime
             },
-            UpdateExpression: 'SET attachmentUrl=:filename',
+            UpdateExpression: 'SET attachmentsUrl=list_append(if_not_exists(attachmentsUrl,:emptyVal), :vals)',
             ExpressionAttributeValues: {
-                ':filename': filename
-            }
+                ":vals": [ filename ],
+                ":emptyVal": []
+            },
+            ReturnValues: 'ALL_NEW'
         }).promise()
+
+        console.log(result.Attributes)
+        return result.Attributes as Appointment
     }
 }

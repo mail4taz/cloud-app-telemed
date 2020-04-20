@@ -1,4 +1,4 @@
-import * as uuid from 'uuid'
+//import * as uuid from 'uuid'
 
 import { StaffDao } from "../dao/staffDao"
 import { AppointmentsDao } from "../dao/appointmentsDao"
@@ -14,7 +14,7 @@ export async function getAvailableAppointmentsByUser(userId: string): Promise<Ap
     return appointmentsDao.getAppointmentsByUser(userId)
 }
 
-export async function createAppointment(newAppointmentReq: CreateAppointmentRequest, currentUser: string): Promise<Appointment> {
+export async function createAppointment(currentUser: string, newAppointmentReq: CreateAppointmentRequest): Promise<Appointment> {
 
     const staffItem: Staff = await staffDao.loadStaff(newAppointmentReq.staffId)
     if (!staffItem)
@@ -22,19 +22,23 @@ export async function createAppointment(newAppointmentReq: CreateAppointmentRequ
     
     const newItem: Appointment = {
         userId: currentUser,
-        appointmentId: uuid.v4(),
+        dueDatetime: newAppointmentReq.dueDatetime,
         staffId: staffItem.staffId,
         createdAt: new Date().toISOString(),
         username: newAppointmentReq.name,
-        dueDatetime: newAppointmentReq.dueDatetime,
         done: false
     }
+
+    let conflictItem: Appointment
+    conflictItem = await appointmentsDao.loadStaffAppointment(newItem)
+    if (conflictItem)
+        throw new Error('Appointment conflicts with existing one, please choose another slot/date')
 
     return await appointmentsDao.createAppointment(newItem)  
 }
 
-export async function deleteAppointment(appointmentId: string, currentUser: string) {
-    let delItem = await getAppointment(appointmentId, currentUser)
+export async function deleteAppointment(currentUser: string, appDateTimeId: number) {
+    let delItem = await getAppointment(currentUser, appDateTimeId)
     if (!delItem) {
         return
     }
@@ -43,32 +47,29 @@ export async function deleteAppointment(appointmentId: string, currentUser: stri
     return delItem
 }
 
-export async function getAppointment(appointmentId: string, currentUser: string): Promise<Appointment> {
+export async function getAppointment(currentUser: string, appDateTimeId: number): Promise<Appointment> {
 
     const anItem = {
         userId: currentUser,
-        appointmentId: appointmentId
+        dueDatetime: appDateTimeId
     } as Appointment
 
-    return await appointmentsDao.loadAppointment(anItem)  
+    return await appointmentsDao.loadUserAppointment(anItem)  
 }
 
-export async function updateAppointment(appointmentId: string, currentUser: string, updateReq: UpdateAppointmentRequest): Promise<Appointment> {
+export async function updateAppointment(currentUser: string, appDateTimeId: number, updateReq: UpdateAppointmentRequest): Promise<Appointment> {
 
-    let itemToUpdate = await getAppointment(appointmentId, currentUser)
+    let itemToUpdate = await getAppointment(currentUser, appDateTimeId)
     if (!itemToUpdate) {
         return
     }
-    console.log(updateReq)
-    //const updatedAppointment = updateReq as AppointmentUpdate
-    //await appointmentsDao.updateAppointment(itemToUpdate, updatedAppointment)
-
-    //itemToUpdate = {...updatedAppointment} as Appointment
+    
+    await appointmentsDao.updateAppointment(itemToUpdate, updateReq)
     return itemToUpdate
 }
 
-export async function attachFile(appointmentId: string, currentUser: string, filename: string): Promise<Appointment> {
-    let itemToUpdate = await getAppointment(appointmentId, currentUser)
+export async function attachFile(currentUser: string, appDateTimeId: number, filename: string): Promise<Appointment> {
+    let itemToUpdate = await getAppointment(currentUser, appDateTimeId)
     if (!itemToUpdate) {
         return
     }

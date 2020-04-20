@@ -102,7 +102,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"name\": \"Me me\",\n\t\"staffId\": \"uuid1\",\n\t\"dueDatetime\": \"2020-05-11 11:30\"\n}"
+							"raw": "{\n\t\"name\": \"Me me\",\n\t\"staffId\": \"uuid1\",\n\t\"dueDatetime\": 1588084200\n}"
 						},
 						"url": {
 							"raw": "https://{{apiId}}.execute-api.{{awsRegion}}.amazonaws.com/{{env}}/appointments",
@@ -141,10 +141,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n\t\"name\": \"Improve the world\",\n\t\"dueDate\": \"2020-12-11\",\n\t\"done\": true\n}"
+							"raw": "{\n\t\"done\": true\n}"
 						},
 						"url": {
-							"raw": "https://{{apiId}}.execute-api.{{awsRegion}}.amazonaws.com/{{env}}/appointments/218a4ad5-45dc-450d-bba5-6ada4f3abf22",
+							"raw": "https://{{apiId}}.execute-api.{{awsRegion}}.amazonaws.com/{{env}}/appointments/1588237200",
 							"protocol": "https",
 							"host": [
 								"{{apiId}}",
@@ -156,7 +156,7 @@
 							"path": [
 								"{{env}}",
 								"appointments",
-								"218a4ad5-45dc-450d-bba5-6ada4f3abf22"
+								"1588237200"
 							]
 						}
 					},
@@ -184,7 +184,7 @@
 							"raw": ""
 						},
 						"url": {
-							"raw": "https://{{apiId}}.execute-api.{{awsRegion}}.amazonaws.com/{{env}}/appointments/809165eb-0205-4d1d-8968-95169b04c472",
+							"raw": "https://{{apiId}}.execute-api.{{awsRegion}}.amazonaws.com/{{env}}/appointments/1588237200",
 							"protocol": "https",
 							"host": [
 								"{{apiId}}",
@@ -196,7 +196,7 @@
 							"path": [
 								"{{env}}",
 								"appointments",
-								"809165eb-0205-4d1d-8968-95169b04c472"
+								"1588237200"
 							]
 						}
 					},
@@ -218,7 +218,7 @@
 							"raw": ""
 						},
 						"url": {
-							"raw": "https://{{apiId}}.execute-api.{{awsRegion}}.amazonaws.com/{{env}}/appointments/3836b777-9bc4-4429-9b79-ba4e4f5f91c0/attachment",
+							"raw": "https://{{apiId}}.execute-api.{{awsRegion}}.amazonaws.com/{{env}}/appointments/1588237200/attachment/unnamed.jpg",
 							"protocol": "https",
 							"host": [
 								"{{apiId}}",
@@ -230,8 +230,9 @@
 							"path": [
 								"{{env}}",
 								"appointments",
-								"3836b777-9bc4-4429-9b79-ba4e4f5f91c0",
-								"attachment"
+								"1588237200",
+								"attachment",
+								"unnamed.jpg"
 							]
 						}
 					},
@@ -322,25 +323,25 @@
 	],
 	"variable": [
 		{
-			"id": "33da42c1-3356-4913-a788-ed0393383cae",
+			"id": "b4e65618-12c4-4901-818d-9cc2e67af7c5",
 			"key": "apiId",
 			"value": "",
 			"type": "string"
 		},
 		{
-			"id": "daff6080-572f-4704-a1cc-b33cfc5f029a",
+			"id": "f4aae3fc-cef3-456e-b39b-6543a9d9b567",
 			"key": "awsRegion",
 			"value": "us-east-2",
 			"type": "string"
 		},
 		{
-			"id": "9d54dc57-7f4d-4c00-a5e6-aa00b5d31dcf",
+			"id": "86e77d9c-f211-4dd2-873d-0f6b2bd1f914",
 			"key": "authToken",
 			"value": "",
 			"type": "string"
 		},
 		{
-			"id": "1167fec4-e33b-44bf-9f60-577a31218b26",
+			"id": "f02796a4-7244-4300-985a-8fcf2e354ceb",
 			"key": "env",
 			"value": "dev",
 			"type": "string"

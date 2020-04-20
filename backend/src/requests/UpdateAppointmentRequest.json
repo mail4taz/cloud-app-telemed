@@ -3,10 +3,10 @@
   "title": "appointment",
   "type": "object",
   "properties": {
-    "dueDatetime": {
-      "type": "string"
+    "done": {
+      "type": "boolean"
     }
   },
-  "required": ["dueDatetime"],
+  "required": ["done"],
   "additionalProperties": false
 }

@@ -5,10 +5,10 @@ It's a mini-serverless app for allowing an authenticated user to make medical ap
 ## Backend - Serverless
 In the project `backend` directory, you can run:
 
-## `sls deploy -v`
+#### `sls deploy -v`
 Deploys AWS lambda functions and AWS resources required to be able to create / list / update user appointments 
 
-## `aws dynamodb batch-write-item --request-items file://./staff-data.json`
+#### `aws dynamodb batch-write-item --request-items file://./staff-data.json`
 Loads the predefined list of medical staff into DynamoDB so you can select a staff member for the appointment
 
 ## Frontend - React - see client [README.md](https://github.com/mail4taz/cloud-app-telemed/client/README.md)

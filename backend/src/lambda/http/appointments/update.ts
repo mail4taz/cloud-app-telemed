@@ -17,7 +17,6 @@ const createError = require('http-errors')
 export const handler = middy( 
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     logger.info('Processing event ', event);
-    const itemId = event.pathParameters.appointmentId
     const updateReq: UpdateAppointmentRequest = JSON.parse(event.body)
 
     let userId: string
@@ -31,13 +30,14 @@ export const handler = middy(
 
     let updateItem
     try {
-      updateItem = await updateAppointment(itemId, userId, updateReq)
+      const appDateTimeId = parseInt(event.pathParameters.appDateTimeId)
+      updateItem = await updateAppointment(userId, appDateTimeId, updateReq)
     } catch (e) {
-      throw new createError.InternalServerError(`Failed to update Todo ${itemId}`)
+      throw new createError.InternalServerError(`Failed to update appointment ${event.pathParameters.appDateTimeId}`)
     }
 
     if (!updateItem)
-      throw new createError.NotFound(`Todo ${itemId} not found`)
+      throw new createError.NotFound(`Appointment ${event.pathParameters.appDateTimeId} not found`)
      
     return {
       statusCode: 200,
