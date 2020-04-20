@@ -19,7 +19,7 @@ export interface AppProps {
 }
 
 export interface AppState {
-  staffList: any[]
+  staffList: Staff[]
 }
 
 export default class App extends Component<AppProps, AppState> {
@@ -41,11 +41,7 @@ export default class App extends Component<AppProps, AppState> {
   }
 
   handleStaffLoad(newStaffList: Staff[]) {
-    let selectList = []
-    for (const s of newStaffList) {
-      selectList.push({ key: s.staffId, value: s.staffId, text: s.name } )
-    }
-    this.setState( {staffList: selectList} )
+    this.setState( {staffList: newStaffList} )
   }
 
   render() {
@@ -117,7 +113,7 @@ export default class App extends Component<AppProps, AppState> {
         />
 
         <Route
-          path="/appointments/:appointmenId/edit"
+          path="/appointments/:appDateTimeId/edit"
           exact
           render={props => {
             return <EditAppointment {...props} auth={this.props.auth} />

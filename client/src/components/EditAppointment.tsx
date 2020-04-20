@@ -13,7 +13,7 @@ enum UploadState {
 interface EditAppointmentProps {
   match: {
     params: {
-      appointmentId: string
+      appDateTimeId: number
     }
   }
   auth: Auth
@@ -46,13 +46,13 @@ export class EditAppointment extends React.PureComponent<
     event.preventDefault()
 
     try {
-      if (!this.state.file) {
+      if (!(this.state.file && this.state.file.name)) {
         alert('File should be selected')
         return
       }
 
       this.setUploadState(UploadState.FetchingPresignedUrl)
-      const uploadUrl = await getUploadUrl(this.props.auth.getIdToken(), this.props.match.params.appointmentId)
+      const uploadUrl = await getUploadUrl(this.props.auth.getIdToken(), this.props.match.params.appDateTimeId, this.state.file.name)
 
       this.setUploadState(UploadState.UploadingFile)
       await uploadFile(uploadUrl, this.state.file)
@@ -75,7 +75,7 @@ export class EditAppointment extends React.PureComponent<
 
     return (
       <div>
-        <h1>Upload new image</h1>
+        <h1>Upload new file</h1>
 
         <Form onSubmit={this.handleSubmit}>
           <Form.Field>

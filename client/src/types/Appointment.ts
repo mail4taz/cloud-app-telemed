@@ -1,10 +1,9 @@
 export interface Appointment {
   staffId: string
   userId: string
-  appointmentId: string
+  dueDatetime: number
   createdAt: string
   username: string
-  dueDatetime: string
   done: boolean
-  attachmentUrl?: string
+  attachmentsUrl?: string[]
 }

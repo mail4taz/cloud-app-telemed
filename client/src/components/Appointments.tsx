@@ -13,6 +13,7 @@ import {
   Select,
   Dropdown,
   Image,
+  List,
   Loader
 } from 'semantic-ui-react'
 import DatePicker from 'react-date-picker';
@@ -45,7 +46,7 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
     newAppointmentName: '',
     loadingAppointments: true,
     dateOption: new Date(),
-    slotOption: '',
+    slotOption: this.props.timeslotList[0].value,
     staffOption: ''
   }
 
@@ -68,33 +69,43 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
     this.setState({ staffOption: data.value as string})
   }
 
-  onEditButtonClick = (appointmentId: string) => {
-    this.props.history.push(`/appointments/${appointmentId}/edit`)
+  onEditButtonClick = (appDateTimeId: number) => {
+    this.props.history.push(`/appointments/${appDateTimeId}/edit`)
   }
 
   onAppointmentCreate = async (event: React.ChangeEvent<HTMLButtonElement>) => {
+    if (! (this.state.newAppointmentName && this.state.dateOption 
+            && this.state.slotOption && this.state.staffOption))
+    {
+      alert('Please enter name / date / chosen staff')
+      return
+    }
+
     try {
-      console.log(this.state)
-      const dueDate = this.calculateDueDate()
+      const dueDatetime = this.calculateAppDate(this.state.dateOption, this.state.slotOption)
       const newAppointment = await createAppointment(this.props.auth.getIdToken(), {
         name: this.state.newAppointmentName,
-        dueDatetime: dueDate,
-        staffId: 'uuid1'
+        dueDatetime: dueDatetime,
+        staffId: this.state.staffOption
       })
+
       this.setState({
         appointments: [...this.state.appointments, newAppointment],
-        newAppointmentName: ''
+        newAppointmentName: '',
+        dateOption: new Date(),
+        staffOption: this.state.staffOption,
+        slotOption: this.props.timeslotList[0].value
       })
-    } catch {
-      alert('Appointment creation failed')
+    } catch (e) {
+      alert('Appointment creation failed - ' + e.message)
     }
   }
 
-  onAppointmentDelete = async (appointmentId: string) => {
+  onAppointmentDelete = async (appDateTimeId: number) => {
     try {
-      await deleteAppointment(this.props.auth.getIdToken(), appointmentId)
+      await deleteAppointment(this.props.auth.getIdToken(), appDateTimeId)
       this.setState({
-        appointments: this.state.appointments.filter(appointment => appointment.appointmentId != appointmentId)
+        appointments: this.state.appointments.filter(appointment => appointment.dueDatetime != appDateTimeId)
       })
     } catch {
       alert('Appointment deletion failed')
@@ -104,19 +115,37 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
   onAppointmentCheck = async (pos: number) => {
     try {
       const appointment = this.state.appointments[pos]
-      await patchAppointment(this.props.auth.getIdToken(), appointment.appointmentId, {
-        //name: appointment.username,
-        dueDatetime: appointment.dueDatetime
-        //done: !appointment.done
+      await patchAppointment(this.props.auth.getIdToken(), appointment.dueDatetime, {
+        done: !appointment.done
       })
       this.setState({
         appointments: update(this.state.appointments, {
-          [pos]: { done: { $set: !appointment.done } }
+          [pos]: { done: { $set: !appointment.done } },
         })
       })
     } catch {
       alert('Appointment update failed')
     }
+  }
+
+  getStaffName(staffId: string) {
+    for (const s of this.props.staffList) {
+      if (s.staffId == staffId)
+        return s.name
+    }
+
+    return staffId;
+  }
+
+  getStaffSelectOptions()
+  {
+    let optionsArr = []
+    for (const s of this.props.staffList)
+    {
+      optionsArr.push({ key: s.staffId, value: s.staffId, text: s.name })
+    }
+
+    return optionsArr
   }
 
   async componentDidMount() {
@@ -145,7 +174,7 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
   }
 
   renderCreateAppointmentInput() {
-    const arr = this.props.staffList && (this.props.staffList.length > 0) ? this.props.staffList : []
+
     return (
       <Grid.Row>
         <Grid.Column width={5}>
@@ -162,11 +191,11 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
             onChange={this.handleNameChange}
           />
           &nbsp;&nbsp;&nbsp;
-          <DatePicker value={this.state.dateOption} onChange={this.onChangeDate} />
+          <DatePicker value={this.state.dateOption} onChange={this.onChangeDate} minDate={new Date()}/>
           &nbsp;&nbsp;&nbsp;
           <Dropdown  inline header='Adjust time span' options={this.props.timeslotList} defaultValue={this.props.timeslotList[0].value} onChange={this.onChangeSlot} />
           &nbsp;&nbsp;&nbsp;
-          <Select placeholder='Select staff' options={arr} width={5} onChange={this.onChangeStaff} />
+          <Select placeholder='Select staff' options={this.getStaffSelectOptions()} width={5} onChange={this.onChangeStaff} />
         </Grid.Column>
         <Grid.Column width={16}>
           <Divider />
@@ -198,40 +227,48 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
       <Grid padded>
         {this.state.appointments.map((appointment, pos) => {
           return (
-            <Grid.Row key={appointment.appointmentId}>
+            <Grid.Row key={appointment.dueDatetime}>
               <Grid.Column width={1} verticalAlign="middle">
                 <Checkbox
                   onChange={() => this.onAppointmentCheck(pos)}
                   checked={appointment.done}
                 />
               </Grid.Column>
-              <Grid.Column width={10} verticalAlign="middle">
-                {appointment.username}
+              <Grid.Column width={3} verticalAlign="middle">
+                {appointment.username} @ {this.getStaffName(appointment.staffId)}
+              </Grid.Column>
+              <Grid.Column width={5}>
+                <List>
+                  {this.getFileSummaryList(appointment.attachmentsUrl).map((fname, pos) => {
+                      return (
+                        <List.Item><a href={fname.link}>{fname.path}</a></List.Item>
+                      )  
+                    })
+                  }
+                </List>
+
               </Grid.Column>
               <Grid.Column width={3} floated="right">
-                {appointment.dueDatetime}
+                {this.getAppDateFromUnixtime(appointment.dueDatetime)}
               </Grid.Column>
-              <Grid.Column width={1} floated="right">
+              <Grid.Column floated="right">
                 <Button
                   icon
                   color="blue"
-                  onClick={() => this.onEditButtonClick(appointment.appointmentId)}
+                  onClick={() => this.onEditButtonClick(appointment.dueDatetime)}
                 >
                   <Icon name="pencil" />
                 </Button>
               </Grid.Column>
-              <Grid.Column width={1} floated="right">
+              <Grid.Column floated="right">
                 <Button
                   icon
                   color="red"
-                  onClick={() => this.onAppointmentDelete(appointment.appointmentId)}
+                  onClick={() => this.onAppointmentDelete(appointment.dueDatetime)}
                 >
                   <Icon name="delete" />
                 </Button>
               </Grid.Column>
-              {appointment.attachmentUrl && (
-                <Image src={appointment.attachmentUrl} size="small" wrapped />
-              )}
               <Grid.Column width={16}>
                 <Divider />
               </Grid.Column>
@@ -242,10 +279,38 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
     )
   }
 
-  calculateDueDate(): string {
-    const date = new Date()
-    date.setDate(date.getDate() + 7)
+  calculateAppDate(date: Date, slot: string): number {
+    date.setUTCDate(date.getDate())
 
-    return dateFormat(date, 'yyyy-mm-dd') as string
+    try {
+      const timeArr = slot.split(':')
+      date.setUTCHours(parseInt(timeArr[0]))
+      date.setUTCMinutes(parseInt(timeArr[1]))
+    }
+    catch (e) {
+      throw Error('Invalid date and time provided')
+    }
+
+    console.log(date.toUTCString())
+    // shave off the miliseconds from the unix time
+    return date.valueOf() / 1000
+  }
+
+  getAppDateFromUnixtime(unixtime: number): string {
+    const date = new Date(unixtime * 1000)
+
+    //console.log(date.toJSON())
+    return dateFormat(date, "yyyy-mm-dd HH:MM", true, true) as string
+  }
+
+  getFileSummaryList(listOfFiles: any): any[] {
+    let files = []
+    if (listOfFiles && listOfFiles.length) {
+      for (const s of listOfFiles) {
+        files.push({ path: s.toString().replace('https://files-sls-dev.s3.us-east-2.amazonaws.com/', '').substr(0,30) + '...', link: s.toString() })
+      }
+    }
+    
+    return files
   }
 }

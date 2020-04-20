@@ -35,6 +35,7 @@ export async function createAppointment(
   idToken: string,
   newAppointment: CreateAppointmentRequest
 ): Promise<Appointment> {
+  console.log('Create appointment:', newAppointment)
   const response = await Axios.post(`${apiEndpoint}/appointments`,  JSON.stringify(newAppointment), {
     headers: {
       'Content-Type': 'application/json',
@@ -46,10 +47,10 @@ export async function createAppointment(
 
 export async function patchAppointment(
   idToken: string,
-  appointmentId: string,
+  appDateTimeId: number,
   updatedAppointment: UpdateAppointmentRequest
 ): Promise<void> {
-  await Axios.patch(`${apiEndpoint}/appointments/${appointmentId}`, JSON.stringify(updatedAppointment), {
+  await Axios.patch(`${apiEndpoint}/appointments/${appDateTimeId}`, JSON.stringify(updatedAppointment), {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`
@@ -59,9 +60,9 @@ export async function patchAppointment(
 
 export async function deleteAppointment(
   idToken: string,
-  appointmentId: string
+  appDateTimeId: number
 ): Promise<void> {
-  await Axios.delete(`${apiEndpoint}/appointments/${appointmentId}`, {
+  await Axios.delete(`${apiEndpoint}/appointments/${appDateTimeId}`, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`
@@ -71,9 +72,11 @@ export async function deleteAppointment(
 
 export async function getUploadUrl(
   idToken: string,
-  appointmentId: string
+  appDateTimeId: number,
+  filename: string
 ): Promise<string> {
-  const response = await Axios.post(`${apiEndpoint}/Appointments/${appointmentId}/attachment`, '', {
+  const encodedFilename = encodeURI(filename)
+  const response = await Axios.post(`${apiEndpoint}/appointments/${appDateTimeId}/attachment/${encodedFilename}`, '', {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`
