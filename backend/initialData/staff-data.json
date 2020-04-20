@@ -1,0 +1,40 @@
+{
+    "staff-sls-dev": [
+        {
+            "PutRequest": {
+                "Item": {
+                    "staffId": {
+                        "S": "uuid1"
+                    },
+                    "name": {
+                        "S": "Dr. JohnD"
+                    }
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                    "staffId": {
+                        "S": "uuid2"
+                    },
+                    "name": {
+                        "S": "MD JoeD"
+                    }
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                    "staffId": {
+                        "S": "uuid3"
+                    },
+                    "name": {
+                        "S": "Generalist ScottD"
+                    }
+                }
+            }
+        }
+    ]
+}

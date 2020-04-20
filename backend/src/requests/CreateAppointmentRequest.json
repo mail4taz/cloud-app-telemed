@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "appointment",
+  "type": "object",
+  "properties": {
+    "staffId": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "dueDatetime": {
+      "type": "string"
+    }
+  },
+  "required": ["staffId", "name", "dueDatetime"],
+  "additionalProperties": true
+}

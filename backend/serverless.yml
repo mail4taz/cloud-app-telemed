@@ -1,0 +1,234 @@
+service:
+  name: ulab-telemedicine-app
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-2'} 
+
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    STAFF_TABLE: staff-sls-${self:provider.stage}
+    APPOINTMENTS_TABLE: meet-sls-${self:provider.stage}
+    APPOINTMENTS_BY_DATE_IDX: DueDatetimeIdx
+    APPOINTMENTS_BY_STAFF_IDX: StaffIdx
+    ATTACHMENTS_BUCKET: files-sls-${self:provider.stage}
+
+package:
+  excludeDevDependencies: true
+#  individually: true    
+
+functions:
+
+  Auth:
+    handler: src/lambda/auth/auth0Authorizer.handler
+
+  GetStaff:
+    handler: src/lambda/http/staff/get.handler
+    events:
+      - http:
+          method: get
+          path: staff
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+          - dynamodb:Scan
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.STAFF_TABLE}
+
+  GetAppointments:
+    handler: src/lambda/http/appointments/get.handler
+    events:
+      - http:
+          method: get
+          path: appointments
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPOINTMENTS_TABLE}
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPOINTMENTS_TABLE}/index/*
+
+  CreateAppointment:
+    handler: src/lambda/http/appointments/create.handler
+    events:
+      - http:
+          method: post
+          path: appointments
+          cors: true
+          authorizer: Auth
+          request:
+            # or use serverless-reqvalidator-plugin
+            schema: 
+              application/json: ${file(src/requests/CreateAppointmentRequest.json)}
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPOINTMENTS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.STAFF_TABLE}      
+
+  DeleteAppointment:
+    handler: src/lambda/http/appointments/delete.handler
+    events:
+      - http:
+          method: delete
+          path: appointments/{appointmentId}
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+          - dynamodb:GetItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPOINTMENTS_TABLE}         
+
+#  UpdateAppointment:
+#    handler: src/lambda/http/appointments/update.handler
+#    events:
+#      - http:
+#          method: patch
+#          path: appointments/{appointmentId}
+#          cors: true
+#          authorizer: Auth
+#          request:
+            # or use serverless-reqvalidator-plugin
+#            schema: 
+#              application/json: ${file(src/requests/UpdateAppointmentRequest.json)}
+#    iamRoleStatements:
+#      - Effect: Allow
+#        Action:
+#          - dynamodb:UpdateItem
+#          - dynamodb:GetItem
+#        Resource: 
+#          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPOINTMENTS_TABLE}
+
+  AttachFile:
+    handler: src/lambda/http/appointments/attachFile.handler
+    events:
+      - http:
+          method: post
+          path: appointments/{appointmentId}/attachment
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:getObject
+          - s3:putObject
+        Resource: 
+          - arn:aws:s3:::${self:provider.environment.APPOINTMENTS_TABLE}/*
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: 
+          - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.APPOINTMENTS_TABLE}     
+
+resources:
+  Resources:
+    StaffDynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: staffId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: staffId
+            KeyType: HASH 
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.STAFF_TABLE}
+
+    AppointmentsDynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: appointmentId
+            AttributeType: S
+          - AttributeName: staffId
+            AttributeType: S  
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: appointmentId
+            KeyType: RANGE  
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.APPOINTMENTS_TABLE}
+        LocalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.APPOINTMENTS_BY_DATE_IDX}
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: staffId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.APPOINTMENTS_BY_STAFF_IDX}
+            KeySchema:
+              - AttributeName: staffId
+                KeyType: HASH
+              - AttributeName: appointmentId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL      
+
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+    GatewayResponseDefault5XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_5XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+    
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.ATTACHMENTS_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - HEAD
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              MaxAge: 300
