@@ -83,6 +83,7 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
 
     try {
       const dueDatetime = this.calculateAppDate(this.state.dateOption, this.state.slotOption)
+      //console.log(`New appointment id - ${dueDatetime}`)
       const newAppointment = await createAppointment(this.props.auth.getIdToken(), {
         name: this.state.newAppointmentName,
         dueDatetime: dueDatetime,
@@ -96,6 +97,7 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
         staffOption: this.state.staffOption,
         slotOption: this.props.timeslotList[0].value
       })
+
     } catch (e) {
       alert('Appointment creation failed - ' + e.message)
     }
@@ -187,6 +189,7 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
               onClick: this.onAppointmentCreate
             }}
             actionPosition="left"
+            value={this.state.newAppointmentName}
             placeholder="Enter a name and find a time ..."
             onChange={this.handleNameChange}
           />
@@ -195,7 +198,7 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
           &nbsp;&nbsp;&nbsp;
           <Dropdown  inline header='Adjust time span' options={this.props.timeslotList} defaultValue={this.props.timeslotList[0].value} onChange={this.onChangeSlot} />
           &nbsp;&nbsp;&nbsp;
-          <Select placeholder='Select staff' options={this.getStaffSelectOptions()} width={5} onChange={this.onChangeStaff} />
+          <Select placeholder='Select staff' options={this.getStaffSelectOptions()} defaultValue={this.state.staffOption} onChange={this.onChangeStaff} width={5} />
         </Grid.Column>
         <Grid.Column width={16}>
           <Divider />
@@ -241,7 +244,7 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
                 <List>
                   {this.getFileSummaryList(appointment.attachmentsUrl).map((fname, pos) => {
                       return (
-                        <List.Item><a href={fname.link}>{fname.path}</a></List.Item>
+                        <List.Item key={pos}><a href={fname.link}>{fname.path}</a></List.Item>
                       )  
                     })
                   }
@@ -291,9 +294,10 @@ export class Appointments extends React.PureComponent<AppointmentsProps, Appoint
       throw Error('Invalid date and time provided')
     }
 
-    console.log(date.toUTCString())
+    //console.log(date.toUTCString())
     // shave off the miliseconds from the unix time
-    return date.valueOf() / 1000
+    const unixSeconds = date.valueOf() / 1000
+    return parseInt(unixSeconds.toString())
   }
 
   getAppDateFromUnixtime(unixtime: number): string {
